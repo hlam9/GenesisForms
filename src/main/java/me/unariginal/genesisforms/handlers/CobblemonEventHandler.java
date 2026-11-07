@@ -58,6 +58,10 @@ import static me.unariginal.genesisforms.config.ConfigManager.*;
 import static me.unariginal.genesisforms.utils.PokemonUtils.applyFeature;
 import static me.unariginal.genesisforms.utils.PokemonUtils.swapPokemonMove;
 
+import net.minecraft.server.MinecraftServer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 public class CobblemonEventHandler {
     public static boolean trinketsLoaded = false;
     // Written from the main thread (server tick, PokemonEntity.after callbacks) but polled from
@@ -179,7 +183,15 @@ public class CobblemonEventHandler {
     public static void battleFaintEvent(BattleFaintedEvent event) {
         Pokemon pokemon = event.getKilled().getEffectedPokemon();
         if (pokemon.isPlayerOwned()) {
-            revertForm(pokemon, true);
+            ServerPlayerEntity owner = pokemon.getOwnerPlayer();
+            if (owner == null || owner.getServer() == null) {
+                revertForm(pokemon, true);
+                return;
+            }
+            MinecraftServer server = owner.getServer();
+
+            CompletableFuture.delayedExecutor(750, TimeUnit.MILLISECONDS)
+                    .execute(() -> server.execute(() -> revertForm(pokemon, true)));
         }
     }
 
